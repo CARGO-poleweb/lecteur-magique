@@ -33,11 +33,14 @@ function unlockSpeechOnFirstGesture() {
 }
 
 function createHomeScreen() {
+  let stopWatchingVoices = null;
+
   return {
     async mount() {
       session.reset();
       const note = qs('#home-library-note');
       const status = qs('#home-status');
+
       try {
         const books = await listBooks();
         note.textContent = books.length
@@ -46,14 +49,29 @@ function createHomeScreen() {
       } catch {
         note.textContent = 'Les pages déjà lues';
       }
+
       if (!globalThis.speechSynthesis) {
         status.textContent = "Ce navigateur ne sait pas lire à voix haute.";
         return;
       }
-      const voices = frenchVoices(await loadVoices());
-      status.textContent = voices.length
-        ? ''
-        : "Aucune voix française installée : ajoute-en dans les réglages du téléphone.";
+
+      // iOS publie parfois ses voix après le chargement de la page : on annonce
+      // leur absence seulement une fois, et on efface dès qu'elles arrivent.
+      const refresh = async () => {
+        const voices = frenchVoices(await loadVoices());
+        status.textContent = voices.length
+          ? ''
+          : "Aucune voix française installée : ajoute-en dans les réglages du téléphone.";
+      };
+      const onVoicesChanged = () => { refresh(); };
+      speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+      stopWatchingVoices = () => speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+      await refresh();
+    },
+
+    unmount() {
+      stopWatchingVoices?.();
+      stopWatchingVoices = null;
     },
   };
 }
