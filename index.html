@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le Lecteur Magique</title>
+<meta name="description" content="Photographie la page d'un livre : l'application la lit à voix haute, avec une voix par personnage.">
+<meta name="theme-color" content="#5B3AE0">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lecteur Magique">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+
+<main id="app">
+
+  <!-- Accueil -->
+  <section class="screen" id="screen-home" hidden>
+    <header class="home-header">
+      <img class="home-logo" src="icons/icon-192.png" alt="" width="96" height="96">
+      <h1>Le Lecteur Magique</h1>
+      <p class="home-tagline">Montre-moi une page, je te la lis.</p>
+    </header>
+    <div class="home-actions">
+      <button class="tile tile-primary" data-go="scan">
+        <span class="tile-emoji" aria-hidden="true">📷</span>
+        <span class="tile-title">Lire un livre</span>
+        <span class="tile-note">Prends la page en photo</span>
+      </button>
+      <button class="tile" data-go="library">
+        <span class="tile-emoji" aria-hidden="true">📚</span>
+        <span class="tile-title">Ma bibliothèque</span>
+        <span class="tile-note" id="home-library-note">Les pages déjà lues</span>
+      </button>
+    </div>
+    <button class="link-button" data-go="settings">⚙️ Réglages</button>
+    <p class="home-footnote" id="home-status"></p>
+  </section>
+
+  <!-- Caméra -->
+  <section class="screen screen-dark" id="screen-scan" hidden>
+    <div class="camera-stage">
+      <video id="camera" playsinline muted autoplay></video>
+      <div class="camera-guide" aria-hidden="true"></div>
+      <p class="camera-hint">Cadre la page entière, bien à plat et bien éclairée.</p>
+    </div>
+    <div class="camera-bar">
+      <button class="round-button" id="scan-back" aria-label="Retour">←</button>
+      <button class="round-button" id="scan-gallery" aria-label="Choisir une photo">🖼️</button>
+      <button class="shutter" id="scan-shoot" aria-label="Prendre la photo"></button>
+      <button class="round-button" id="scan-torch" aria-label="Lampe">🔦</button>
+      <button class="round-button" id="scan-flip" aria-label="Changer de caméra">🔄</button>
+    </div>
+    <input type="file" id="scan-file" accept="image/*" hidden>
+  </section>
+
+  <!-- Texte reconnu -->
+  <section class="screen" id="screen-prepare" hidden>
+    <header class="bar">
+      <button class="round-button" data-back aria-label="Retour">←</button>
+      <h2>La page</h2>
+      <button class="round-button" id="prepare-retake" aria-label="Reprendre la photo">📷</button>
+    </header>
+    <div class="scroll">
+      <div class="prepare-preview">
+        <img id="prepare-thumb" alt="Aperçu de la page photographiée">
+        <p class="prepare-quality" id="prepare-quality"></p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Le texte lu</h3>
+          <button class="chip" id="prepare-edit">✏️ Corriger</button>
+        </div>
+        <p class="panel-note">Vérifie que rien ne manque. L'appareil photo se trompe parfois sur les lettres fantaisie.</p>
+        <div id="prepare-segments" class="segments"></div>
+        <textarea id="prepare-textarea" class="textarea" hidden spellcheck="true"></textarea>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Qui parle&nbsp;?</h3>
+          <button class="chip" data-go="cast">🎭 Les voix</button>
+        </div>
+        <div id="prepare-characters" class="character-pills"></div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-primary btn-large" id="prepare-read">▶️ Lire la page</button>
+    </div>
+  </section>
+
+  <!-- Distribution des voix -->
+  <section class="screen" id="screen-cast" hidden>
+    <header class="bar">
+      <button class="round-button" data-back aria-label="Retour">←</button>
+      <h2>Les voix</h2>
+      <button class="round-button" id="cast-auto" aria-label="Redistribuer automatiquement">🎲</button>
+    </header>
+    <div class="scroll" id="cast-list"></div>
+    <div class="action-bar">
+      <button class="btn btn-primary btn-large" data-back>C'est bon&nbsp;!</button>
+    </div>
+  </section>
+
+  <!-- Lecture -->
+  <section class="screen" id="screen-read" hidden>
+    <header class="bar">
+      <button class="round-button" id="read-back" aria-label="Retour">←</button>
+      <div class="speaker-badge" id="read-speaker">
+        <span class="speaker-emoji" aria-hidden="true">📖</span>
+        <span class="speaker-name">Narrateur</span>
+      </div>
+      <button class="round-button" data-go="cast" aria-label="Changer les voix">🎭</button>
+    </header>
+    <div class="scroll reading" id="read-text"></div>
+    <div class="player">
+      <div class="player-progress"><span id="read-progress"></span></div>
+      <div class="player-buttons">
+        <button class="round-button" id="read-prev" aria-label="Phrase précédente">⏮</button>
+        <button class="play-button" id="read-play" aria-label="Lire">▶️</button>
+        <button class="round-button" id="read-next" aria-label="Phrase suivante">⏭</button>
+        <button class="round-button" id="read-speed" aria-label="Vitesse">1×</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bibliothèque -->
+  <section class="screen" id="screen-library" hidden>
+    <header class="bar">
+      <button class="round-button" data-back aria-label="Retour">←</button>
+      <h2>Ma bibliothèque</h2>
+      <span class="bar-spacer"></span>
+    </header>
+    <div class="scroll" id="library-list"></div>
+  </section>
+
+  <!-- Réglages -->
+  <section class="screen" id="screen-settings" hidden>
+    <header class="bar">
+      <button class="round-button" data-back aria-label="Retour">←</button>
+      <h2>Réglages</h2>
+      <span class="bar-spacer"></span>
+    </header>
+    <div class="scroll" id="settings-list"></div>
+  </section>
+
+</main>
+
+<div id="busy" class="busy" hidden role="status" aria-live="polite">
+  <div class="busy-card">
+    <div class="busy-spinner" aria-hidden="true"></div>
+    <p class="busy-label">Un instant…</p>
+    <div class="busy-bar"><span></span></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

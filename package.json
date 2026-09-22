@@ -1,0 +1,11 @@
+{
+  "name": "lecteur-magique",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PWA de lecture a voix haute pour enfants : photographier une page, l'ecouter jouee avec une voix par personnage.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "start": "node tools/serve.mjs"
+  }
+}

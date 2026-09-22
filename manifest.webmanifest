@@ -1,0 +1,19 @@
+{
+  "name": "Le Lecteur Magique",
+  "short_name": "Lecteur",
+  "description": "Photographie la page d'un livre : l'application la lit a voix haute, avec une voix par personnage.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFF6E9",
+  "theme_color": "#5B3AE0",
+  "categories": ["education", "books", "kids"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
