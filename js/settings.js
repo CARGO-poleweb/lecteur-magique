@@ -8,6 +8,7 @@ const DEFAULTS = {
   highlightWords: true,     // surligner le mot en cours
   easyFont: false,          // interlignage et espacement renforcés
   autoScroll: true,
+  autoPageTurn: true,       // continuer à surveiller la caméra pendant la lecture
   voiceProvider: 'local',   // 'local' | 'premium'
   premiumKey: '',           // clé ElevenLabs, jamais envoyée ailleurs qu'à ElevenLabs
   premiumModel: 'eleven_multilingual_v2',

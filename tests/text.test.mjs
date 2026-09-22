@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanOcrText, splitSentences, toParagraphs, looksEmpty } from '../js/text.js';
+import { cleanOcrText, splitSentences, toParagraphs, looksEmpty, textSimilarity } from '../js/text.js';
 
 test('recolle les lignes d’un même paragraphe', () => {
   const ocr = 'Il était une fois une petite fille qui\nvivait au bord de la grande forêt\nsombre.';
@@ -72,4 +72,12 @@ test('ne coupe pas un paragraphe sur une ligne vide au milieu d’une phrase', (
 test('respecte une ligne vide entre deux phrases terminées', () => {
   const ocr = 'Le loup avait très faim.\n\nIl partit chasser dans la forêt.';
   assert.equal(toParagraphs(cleanOcrText(ocr)).length, 2);
+});
+
+test('reconnaît qu’il s’agit toujours de la même page', () => {
+  const page = 'Le petit lapin vivait au bord de la grande forêt sombre et profonde.';
+  const rescan = 'Le petit Iapin vivait au bord de la grande forêt sombre et profonde';
+  assert.ok(textSimilarity(page, rescan) > 0.7, textSimilarity(page, rescan));
+  assert.ok(textSimilarity(page, 'La sorcière préparait une potion verte dans son chaudron.') < 0.3);
+  assert.equal(textSimilarity('', ''), 1);
 });

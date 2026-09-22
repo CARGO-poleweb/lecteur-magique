@@ -69,6 +69,22 @@ const NOT_A_CHARACTER = new Set(['verite', 'betise', 'betises', 'chose', 'choses
   'coup', 'air', 'ton', 'tete', 'main', 'porte', 'maison', 'chemin', 'route', 'temps', 'moment',
   'raison', 'tort', 'peur', 'faim', 'soif', 'sommeil', 'contraire', 'meme', 'priere']);
 
+/**
+ * Repli des accents, caractère pour caractère (la longueur ne change pas, donc
+ * les positions trouvées restent valables sur le texte d'origine).
+ *
+ * L'OCR perd régulièrement les accents d'une photo moyenne : sans ce repli,
+ * « repondit le lapin » ne serait pas reconnu comme une incise.
+ */
+const ACCENTS = { 'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a', 'å': 'a',
+  'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e', 'î': 'i', 'ï': 'i', 'í': 'i', 'ì': 'i',
+  'ô': 'o', 'ö': 'o', 'ó': 'o', 'ò': 'o', 'õ': 'o', 'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+  'ç': 'c', 'ÿ': 'y', 'ñ': 'n',
+  'À': 'A', 'Â': 'A', 'Ä': 'A', 'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+  'Î': 'I', 'Ï': 'I', 'Ô': 'O', 'Ö': 'O', 'Ù': 'U', 'Û': 'U', 'Ü': 'U', 'Ç': 'C' };
+
+const foldAccents = (text) => String(text).replace(/[^\x00-\x7F]/g, (c) => ACCENTS[c] || c);
+
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** « loup » → « [Ll]oup » : le mot peut apparaître en début de phrase. */
@@ -82,7 +98,7 @@ function bothCases(word) {
 
 const alternation = (words) => words.slice().sort((a, b) => b.length - a.length).map(bothCases).join('|');
 
-const VERB_SRC = alternation(SPEECH_VERBS);
+const VERB_SRC = alternation(SPEECH_VERBS.map(foldAccents));
 // Le déterminant absorbe son espace, sauf « l’ » qui colle au nom.
 const DET_SRC = `(?:(?:${alternation(DETERMINERS)})\\s+|[Ll]’)`;
 const ADJ_SRC = `(?:${alternation(ADJECTIVES)})\\s+`;
@@ -136,9 +152,10 @@ function isRejectedName(raw) {
  */
 export function findAttribution(clause) {
   const text = String(clause || '');
+  const folded = foldAccents(text);
   const re = newVerbRe();
   let match;
-  while ((match = re.exec(text))) {
+  while ((match = re.exec(folded))) {
     const after = text.slice(match.index + match[0].length);
     const before = text.slice(0, match.index);
 
@@ -156,7 +173,7 @@ export function findAttribution(clause) {
 
 /** Ces verbes prolongent la parole de celui qui vient de parler. */
 const CONTINUATION_VERBS = new Set(['ajouta', 'ajoute', 'reprit', 'reprend', 'poursuivit',
-  'conclut', 'renchérit', 'précisa', 'insista', 'répéta', 'répète', 'continua', 'termina']);
+  'conclut', 'rencherit', 'precisa', 'insista', 'repeta', 'repete', 'continua', 'termina']);
 
 const FEMININE = new Set(['maman', 'mamie', 'mamy', 'meme', 'mere', 'grand-mere', 'soeur', 'fille',
   'fillette', 'princesse', 'reine', 'fee', 'sorciere', 'dame', 'madame', 'tante', 'tata', 'chatte',
@@ -222,7 +239,7 @@ function markParagraph(para) {
  * bien quelqu'un, sinon « — Il dit toujours ça ! » basculerait en narration.
  */
 function markIncises(para, marks, from, to, attributions) {
-  const region = para.slice(from, to);
+  const region = foldAccents(para.slice(from, to));
   const re = newVerbRe();
   let match;
   while ((match = re.exec(region))) {

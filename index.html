@@ -18,6 +18,11 @@
 </head>
 <body>
 
+<div id="camera-layer" class="camera-layer is-off">
+  <video id="camera" playsinline muted autoplay></video>
+  <div class="camera-guide" aria-hidden="true"></div>
+</div>
+
 <main id="app">
 
   <!-- Accueil -->
@@ -43,19 +48,20 @@
     <p class="home-footnote" id="home-status"></p>
   </section>
 
-  <!-- Caméra -->
-  <section class="screen screen-dark" id="screen-scan" hidden>
-    <div class="camera-stage">
-      <video id="camera" playsinline muted autoplay></video>
-      <div class="camera-guide" aria-hidden="true"></div>
-      <p class="camera-hint">Cadre la page entière, bien à plat et bien éclairée.</p>
-    </div>
-    <div class="camera-bar">
+  <!-- Visée : la caméra tourne en continu, il n'y a rien à déclencher -->
+  <section class="screen screen-live" id="screen-scan" hidden>
+    <header class="bar bar-floating">
       <button class="round-button" id="scan-back" aria-label="Retour">←</button>
-      <button class="round-button" id="scan-gallery" aria-label="Choisir une photo">🖼️</button>
-      <button class="shutter" id="scan-shoot" aria-label="Prendre la photo"></button>
+      <span class="bar-spacer"></span>
       <button class="round-button" id="scan-torch" aria-label="Lampe">🔦</button>
       <button class="round-button" id="scan-flip" aria-label="Changer de caméra">🔄</button>
+    </header>
+    <div class="live-middle">
+      <p class="live-status" id="scan-status">Montre-moi une page 👀</p>
+    </div>
+    <div class="live-bar">
+      <button class="btn btn-primary" id="scan-force" hidden>Lire cette page maintenant</button>
+      <button class="link-button" id="scan-gallery">🖼️ Ouvrir une photo existante</button>
     </div>
     <input type="file" id="scan-file" accept="image/*" hidden>
   </section>
@@ -117,10 +123,11 @@
         <span class="speaker-emoji" aria-hidden="true">📖</span>
         <span class="speaker-name">Narrateur</span>
       </div>
-      <button class="round-button" data-go="cast" aria-label="Changer les voix">🎭</button>
+      <button class="round-button" data-go="prepare" aria-label="Corriger le texte et les voix">✏️</button>
     </header>
     <div class="scroll reading" id="read-text"></div>
     <div class="player">
+      <button class="next-page-chip" id="read-next-page" hidden>📄 Page suivante prête — appuie pour enchaîner</button>
       <div class="player-progress"><span id="read-progress"></span></div>
       <div class="player-buttons">
         <button class="round-button" id="read-prev" aria-label="Phrase précédente">⏮</button>

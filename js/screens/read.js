@@ -21,12 +21,14 @@ function tokenize(text) {
   return tokens;
 }
 
-export function createReadScreen() {
+export function createReadScreen(live) {
   const host = qs('#read-text');
   const badge = qs('#read-speaker');
   const playButton = qs('#read-play');
   const progress = qs('#read-progress');
   const speedButton = qs('#read-speed');
+  const nextPageChip = qs('#read-next-page');
+  let pendingPage = null;
   let currentChunkNode = null;
   let spokenWord = null;
   let wired = false;
@@ -43,11 +45,31 @@ export function createReadScreen() {
     onWarning: (message) => toast(message),
     onError: (error) => toast(error.message, 'error'),
     onFinish: () => {
-      toast('Page terminée 🎉', 'ok');
       currentChunkNode?.classList.remove('is-current');
       spokenWord?.classList.remove('is-spoken');
+      if (pendingPage) { applyPage(pendingPage); return; }
+      toast('Page terminée 🎉 Tourne la page, je continue.', 'ok');
     },
   });
+
+  /** Charge une page fraîchement reconnue et enchaîne la lecture. */
+  async function applyPage(page) {
+    pendingPage = null;
+    nextPageChip.hidden = true;
+    session.thumb = page.thumb;
+    session.confidence = page.confidence;
+    session.setText(page.text);
+    try { await session.persist(); } catch { /* la lecture prime sur le rangement */ }
+    render();
+    player.play(0);
+  }
+
+  /** La caméra a vu une nouvelle page pendant qu'on lisait. */
+  function onNewPage(page) {
+    if (player.status === 'idle') { applyPage(page); return; }
+    pendingPage = page;
+    nextPageChip.hidden = false;
+  }
 
   function focusChunk(index, chunk) {
     currentChunkNode?.classList.remove('is-current');
@@ -133,6 +155,7 @@ export function createReadScreen() {
     qs('#read-prev').addEventListener('click', () => player.previous());
     qs('#read-next').addEventListener('click', () => player.next());
     qs('#read-back').addEventListener('click', () => router.back());
+    nextPageChip.addEventListener('click', () => { if (pendingPage) applyPage(pendingPage); });
     speedButton.addEventListener('click', () => {
       const rate = settings.get('rate') || 1;
       const next = SPEEDS[(SPEEDS.indexOf(rate) + 1) % SPEEDS.length];
@@ -146,8 +169,17 @@ export function createReadScreen() {
     async mount(_params, options = {}) {
       wire();
       render();                                   // le texte s'affiche tout de suite
-      const voices = await player.refreshVoices();
+      pendingPage = null;
+      nextPageChip.hidden = true;
 
+      // La caméra continue de veiller : c'est elle qui verra la page tournée.
+      live.setHandlers({
+        onPage: onNewPage,
+        onError: (error) => toast(error.message, 'error'),
+      });
+      live.setMode(settings.get('autoPageTurn') ? 'mini' : 'off');
+
+      const voices = await player.refreshVoices();
       if (!voices.length && settings.get('voiceProvider') !== 'premium') {
         toast("Aucune voix n'est installée sur cet appareil : le texte s'affiche, mais je ne peux pas le lire.", 'error');
         return;

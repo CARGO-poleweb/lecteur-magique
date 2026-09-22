@@ -131,3 +131,16 @@ test('un décor ne devient pas un personnage', () => {
   const { characters } = analyseText(text);
   assert.ok(!characters.some((c) => /arbre|jardin|vent/i.test(c.name)), `personnages : ${characters.map((c) => c.name)}`);
 });
+
+test('reconnaît une incise même quand l’OCR a perdu les accents', () => {
+  const text = [
+    '- Bonjour, dit le loup.',
+    '- Je ne suis pas seul ! repondit le lapin.',
+    '- Ah bon ? s ecria le loup.',
+  ].join('\n\n');
+  assert.deepEqual(speakers(text).slice(0, 2), ['Le loup', 'Le lapin']);
+});
+
+test('les accents présents marchent toujours', () => {
+  assert.deepEqual(speakers('— Viens ! s’écria la sorcière.'), ['La sorcière']);
+});

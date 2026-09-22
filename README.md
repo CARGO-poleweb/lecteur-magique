@@ -12,23 +12,47 @@ ensuite comme une vraie application, y compris sans réseau.
 
 ## Comment ça marche
 
+Il n'y a **aucun bouton pour déclencher**. On tient le téléphone au-dessus du
+livre, l'application fait le reste — et quand on tourne la page, elle enchaîne.
+
 ```
-   📷 Photo de la page
+   📹 La caméra reste ouverte
         ↓
-   🧹 Nettoyage de l'image      redimensionnement + seuillage adaptatif
-        ↓                       (encaisse l'ombre du lecteur et le reflet de la lampe)
-   🔤 Reconnaissance du texte    Tesseract, modèle français, dans le navigateur
+   👀 Surveillance, 6 images/seconde     l'appareil bouge-t-il ? est-ce net ?
+        ↓                                y a-t-il quelque chose d'écrit ?
+   ⏸️  Page immobile et nette
         ↓
-   📝 Remise en forme            recollage des lignes, césures, numéros de page jetés
+   🧹 Nettoyage de l'image               redimensionnement + seuillage adaptatif
+        ↓                                (encaisse l'ombre du lecteur et les reflets)
+   🔤 Reconnaissance du texte             Tesseract, modèle français, dans le navigateur
         ↓
-   🎭 Qui parle ?                incises, guillemets, tirets, pronoms, alternance
+   📝 Remise en forme                     recollage des lignes, césures, numéros de page jetés
         ↓
-   🗣️ Lecture                    une voix par personnage, mot surligné au fil de la lecture
+   🎭 Qui parle ?                         incises, guillemets, tirets, pronoms, alternance
+        ↓
+   🗣️ Lecture                             une voix par personnage, mot surligné
+        ↓
+   🔄 On tourne la page → retour en haut
 ```
 
-Chaque étape est visible et corrigeable avant de lancer la lecture : le texte
-reconnu s'affiche, chaque réplique porte le nom de celui qui la dit, et un
-tapotement suffit à changer de locuteur ou à renommer un personnage.
+Pourquoi ce détour plutôt que de reconnaître le texte en continu : une page
+entière coûte une à trois secondes de calcul. Analyser 6 images par seconde pour
+répondre à trois questions bon marché — ça bouge ? c'est net ? y a-t-il de
+l'encre ? — coûte mille fois moins, et permet de ne lancer la reconnaissance
+qu'au bon moment. C'est aussi ce même signal de mouvement qui sert à repérer
+qu'on a tourné la page.
+
+Pendant la lecture, la caméra continue de veiller dans une petite vignette en
+bas de l'écran. Tourne la page : la suivante est reconnue en fond, et la lecture
+enchaîne dès que la page en cours est finie (ou tout de suite, en tapant sur
+« page suivante prête »).
+
+Si l'application n'arrive pas à se décider au bout de sept secondes, un bouton
+« Lire cette page maintenant » apparaît — filet de sécurité, pas mode normal.
+
+Tout reste corrigeable : depuis la lecture, le bouton ✏️ montre le texte reconnu
+et qui dit quoi ; un tapotement sur une réplique change de locuteur, un autre
+renomme un personnage.
 
 ## Les voix
 
@@ -115,6 +139,11 @@ romans premières lectures, albums au texte classique, documentaires jeunesse.
 - les **pages très bombées** près de la reliure ;
 - les **bulles de bande dessinée**, lues dans un ordre incertain.
 
+**La détection automatique de page** suppose que le téléphone s'immobilise une
+demi-seconde au-dessus d'une page écrite. Dans une voiture qui roule ou dans les
+mains d'un enfant de trois ans, elle hésitera ; c'est à cela que sert le bouton
+de secours.
+
 **L'attribution des répliques est une heuristique**, pas une compréhension du
 récit. Elle vise juste la plupart du temps grâce aux incises (« dit le loup »),
 aux pronoms et à l'alternance des tirets ; elle se trompe sur les dialogues à
@@ -145,7 +174,9 @@ styles/app.css          toute la mise en forme
 js/
   main.js               démarrage, navigation, écran d'accueil
   router.js             pile d'écrans + bouton retour d'Android
-  camera.js             caméra arrière, torche, prise de vue
+  camera.js             caméra arrière, torche, capture d'image
+  live.js               netteté, mouvement, encre : quand faut-il lire ?
+  live-reader.js        la boucle caméra → détection → reconnaissance → page
   imaging.js            redimensionnement et seuillage adaptatif
   ocr.js                Tesseract, en local
   text.js               nettoyage du texte OCR, découpage en phrases

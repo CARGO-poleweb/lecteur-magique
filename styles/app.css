@@ -64,6 +64,7 @@ body {
   background: var(--paper);
 }
 .screen[hidden] { display: none; }
+.screen { z-index: 3; }
 .screen-dark { background: #0B0A16; color: #fff; }
 
 .scroll {
@@ -173,41 +174,74 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- Caméra ---------- */
 
-.camera-stage { position: relative; flex: 1; overflow: hidden; }
-#camera { width: 100%; height: 100%; object-fit: cover; background: #000; }
+/* La caméra vit hors des écrans : elle reste allumée quand on passe de la visée
+   à la lecture, pour repérer le moment où l'enfant tourne la page. */
+.camera-layer {
+  position: fixed;
+  z-index: 2;
+  overflow: hidden;
+  background: #000;
+  transition: width .3s ease, height .3s ease, inset .3s ease, border-radius .3s ease, opacity .2s ease;
+}
+.camera-layer video { width: 100%; height: 100%; object-fit: cover; }
+.camera-layer.is-off { top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.camera-layer.is-full { inset: 0; border-radius: 0; }
+.camera-layer.is-mini {
+  left: 14px;
+  bottom: calc(132px + var(--safe-bottom));
+  width: 84px;
+  height: 110px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, .85);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+}
 .camera-guide {
   position: absolute;
   inset: 10% 6%;
-  border: 3px dashed rgba(255, 255, 255, .55);
+  border: 3px dashed rgba(255, 255, 255, .5);
   border-radius: 18px;
   pointer-events: none;
 }
-.camera-hint {
-  position: absolute;
-  left: 0; right: 0; bottom: 14px;
+.camera-layer.is-mini .camera-guide { display: none; }
+
+/* L'écran de visée se pose par-dessus la caméra : il ne montre que les commandes. */
+.screen-live { background: transparent; z-index: 3; }
+.bar-floating { background: transparent; border-bottom: 0; }
+.live-middle { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding: 20px; }
+.live-status {
   margin: 0;
-  text-align: center;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(11, 10, 22, .68);
   color: #fff;
-  font-size: .9rem;
-  text-shadow: 0 2px 8px rgba(0,0,0,.8);
+  font-weight: 700;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  max-width: 92%;
 }
-.camera-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 10px;
-  padding: 16px 12px calc(16px + var(--safe-bottom));
-  background: #0B0A16;
+.live-status[data-state="reading"] { background: rgba(109, 75, 245, .9); }
+.live-status[data-state="unreadable"] { background: rgba(214, 69, 92, .9); }
+.live-bar {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 10px 16px calc(16px + var(--safe-bottom));
 }
-.shutter {
-  width: 78px; height: 78px;
-  border-radius: 50%;
-  border: 5px solid rgba(255,255,255,.85);
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(255,255,255,.2);
-}
-.shutter:active { transform: scale(.93); }
+.live-bar .link-button { color: rgba(255, 255, 255, .85); }
 .round-button[aria-pressed="true"] { background: var(--accent); color: #2A2140; }
+
+.next-page-chip {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  margin-bottom: 10px;
+  background: var(--accent);
+  color: #2A2140;
+  font-weight: 700;
+  font-size: .92rem;
+}
 
 /* ---------- Panneaux ---------- */
 

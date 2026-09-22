@@ -168,3 +168,22 @@ export function looksEmpty(text) {
   const letters = (String(text || '').match(/[A-Za-zÀ-ÖØ-öø-ÿ]/g) || []).length;
   return letters < 12;
 }
+
+/**
+ * Ressemblance entre deux textes, de 0 à 1 (indice de Jaccard sur les mots).
+ * Sert à savoir si la caméra regarde toujours la même page : l'OCR ne rend
+ * jamais deux fois exactement le même texte, même sans bouger.
+ */
+export function textSimilarity(first, second) {
+  const words = (value) => new Set(String(value || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .match(/[a-z0-9]{2,}/g) || []);
+  const a = words(first);
+  const b = words(second);
+  if (!a.size && !b.size) return 1;
+  if (!a.size || !b.size) return 0;
+  let shared = 0;
+  for (const word of a) if (b.has(word)) shared += 1;
+  return shared / (a.size + b.size - shared);
+}

@@ -5,6 +5,7 @@ import { router } from './router.js';
 import { session } from './state.js';
 import { listBooks } from './store.js';
 import { loadVoices, frenchVoices } from './voices.js';
+import { createLiveReader } from './live-reader.js';
 import { createScanScreen } from './screens/scan.js';
 import { createPrepareScreen } from './screens/prepare.js';
 import { createCastScreen } from './screens/cast.js';
@@ -32,12 +33,13 @@ function unlockSpeechOnFirstGesture() {
   document.addEventListener('touchstart', unlock, { once: true });
 }
 
-function createHomeScreen() {
+function createHomeScreen(live) {
   let stopWatchingVoices = null;
 
   return {
     async mount() {
       session.reset();
+      live.forget();                    // nouveau livre : on oublie la page précédente
       const note = qs('#home-library-note');
       const status = qs('#home-status');
 
@@ -97,13 +99,26 @@ function start() {
   unlockSpeechOnFirstGesture();
   wireGlobalNavigation();
 
-  router.register('home', createHomeScreen());
-  router.register('scan', createScanScreen());
-  router.register('prepare', createPrepareScreen());
-  router.register('cast', createCastScreen());
-  router.register('read', createReadScreen());
-  router.register('library', createLibraryScreen());
-  router.register('settings', createSettingsScreen());
+  const live = createLiveReader(qs('#camera'), qs('#camera-layer'));
+
+  // La caméra n'a de raison d'être que sur la visée et la lecture : partout
+  // ailleurs on l'éteint, sans que chaque écran ait à y penser.
+  const KEEPS_CAMERA = new Set(['scan', 'read']);
+  const register = (name, screen) => router.register(name, {
+    async mount(params, options) {
+      if (!KEEPS_CAMERA.has(name)) await live.setMode('off');
+      return screen.mount?.(params, options);
+    },
+    unmount: () => screen.unmount?.(),
+  });
+
+  register('home', createHomeScreen(live));
+  register('scan', createScanScreen(live));
+  register('prepare', createPrepareScreen());
+  register('cast', createCastScreen());
+  register('read', createReadScreen(live));
+  register('library', createLibraryScreen());
+  register('settings', createSettingsScreen());
 
   router.start('home');
   registerServiceWorker();

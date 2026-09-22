@@ -30,6 +30,8 @@ const SHELL = [
   './js/premium.js',
   './js/imaging.js',
   './js/camera.js',
+  './js/live.js',
+  './js/live-reader.js',
   './js/ocr.js',
   './js/screens/scan.js',
   './js/screens/prepare.js',
