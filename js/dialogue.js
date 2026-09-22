@@ -319,6 +319,7 @@ export function analyseText(text) {
   const registry = createRegistry();
   const segments = [];
   const recent = [];                 // clés des derniers locuteurs, plus récent en tête
+  const mentions = [];               // personnages cités dans la narration, plus récent en tête
   let lastDialogueKey = null;
   let placeholderCount = 0;
 
@@ -335,6 +336,12 @@ export function analyseText(text) {
       .map((run) => ({ kind: run.kind, text: cleanRun(run) }))
       .filter((run) => run.text && hasLetters(run.text));
     if (!runs.length) continue;
+
+    for (const run of runs) {
+      if (run.kind !== 'narration') continue;
+      for (const mention of collectMentions(run.text)) mentions.unshift(mention);
+    }
+    mentions.splice(8);
 
     const hasDialogue = runs.some((run) => run.kind === 'dialogue');
     let attribution = attributions[0] || null;
@@ -353,6 +360,11 @@ export function analyseText(text) {
         speaker = registry.register(attribution.name);
       } else if (attribution && attribution.pronoun) {
         speaker = resolvePronoun(attribution, recent, lastDialogueKey, registry.characters);
+        if (!speaker) {
+          const wanted = /elles?$/.test(attribution.pronoun) ? 'f' : attribution.pronoun === 'on' ? null : 'm';
+          const mention = wanted ? mentions.find((entry) => entry.gender === wanted) : null;
+          if (mention) speaker = registry.register(mention.name);
+        }
       }
       if (!speaker) {
         const alternate = recent.find((key) => key !== lastDialogueKey);
@@ -401,11 +413,40 @@ function resolvePronoun({ pronoun, verb }, recent, lastDialogueKey, characters) 
   const compatible = (key) => !wanted || (characters.get(key)?.gender ?? wanted) === wanted;
   const pool = recent.filter(compatible);
 
+  if (!pool.length) return null;          // personne du bon genre : à l'appelant de chercher ailleurs
   if (!CONTINUATION_VERBS.has(verb.toLowerCase())) {
     const alternate = pool.find((key) => key !== lastDialogueKey);
     if (alternate) return characters.get(alternate);
   }
-  return characters.get(pool[0] || recent[0]) || null;
+  return characters.get(pool[0]) || null;
+}
+
+/**
+ * Les noms de personnages cités dans la narration.
+ * « La sorcière, cachée derrière un arbre, éclata de rire. » puis
+ * « — … s'écria-t-elle. » : c'est la seule piste pour savoir qui parle.
+ * On ne retient que les noms propres et les mots dont on connaît le genre,
+ * sinon « derrière un arbre » deviendrait un personnage.
+ */
+const MENTION_RE = new RegExp(`(${COMMON_SRC}|${FAMILY_SRC}|${PROPER_SRC})`, 'g');
+const STARTS_WITH_DETERMINER = /^(?:l[ea]s?|l\u2019|un|une|mon|ma|mes|son|sa|ses|leur|leurs|ce|cet|cette|notre|nos|votre|vos)\b/i;
+
+function collectMentions(text) {
+  const found = [];
+  const re = new RegExp(MENTION_RE.source, 'g');
+  let match;
+  while ((match = re.exec(text))) {
+    const raw = match[1];
+    if (isRejectedName(raw)) continue;
+    const key = characterKey(raw);
+    const bare = key.replace(ADJ_PREFIX_RE, '');
+    const known = FEMININE.has(bare) || MASCULINE.has(bare);
+    const proper = !STARTS_WITH_DETERMINER.test(raw) && /^[A-Z\u00C0-\u00D6\u00D8-\u00DE]/.test(raw);
+    if (!known && !proper) continue;
+    const name = tidyName(raw);
+    found.push({ name, key, gender: guessGender(name, key) });
+  }
+  return found;
 }
 
 function sortCharacters(characters, segments) {

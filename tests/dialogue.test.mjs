@@ -112,3 +112,22 @@ test('un verbe de continuation garde le même locuteur', () => {
   ].join('\n\n');
   assert.deepEqual(speakers(text), ['Léa', 'Léa']);
 });
+
+test('retrouve un personnage nommé dans la narration précédente', () => {
+  const text = [
+    '— Bonjour, dit le loup.',
+    '— Salut, répondit le lapin.',
+    'La sorcière, cachée derrière un arbre, éclata de rire.',
+    '— Personne n’échappe à ma potion ! s’écria-t-elle.',
+  ].join('\n\n');
+  assert.deepEqual(speakers(text), ['Le loup', 'Le lapin', 'La sorcière']);
+});
+
+test('un décor ne devient pas un personnage', () => {
+  const text = [
+    'Le vent soufflait derrière un arbre, au fond du jardin.',
+    '— J’ai froid, dit-il.',
+  ].join('\n\n');
+  const { characters } = analyseText(text);
+  assert.ok(!characters.some((c) => /arbre|jardin|vent/i.test(c.name)), `personnages : ${characters.map((c) => c.name)}`);
+});

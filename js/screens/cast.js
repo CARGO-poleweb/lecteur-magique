@@ -55,6 +55,12 @@ export function createCastScreen() {
       head.querySelector('.cast-name').title = 'Renommer';
     }
 
+    // La bande est large : on l'amène sur le timbre retenu, sinon on ne le voit pas.
+    requestAnimationFrame(() => {
+      const chosenButton = strip.querySelector('[aria-pressed="true"]');
+      if (chosenButton) strip.scrollLeft = Math.max(0, chosenButton.offsetLeft - strip.offsetLeft);
+    });
+
     return el('div', { class: 'cast-row' }, [head, strip]);
   }
 
