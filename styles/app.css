@@ -233,7 +233,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 4px;
   padding: 10px 16px calc(16px + var(--safe-bottom));
 }
-.live-bar .link-button { color: rgba(255, 255, 255, .85); }
+/* Ce bouton se pose soit sur l'image de la caméra, soit — quand il n'y a pas
+   de caméra, sur un ordinateur — sur le fond clair de l'application. Il lui
+   faut donc son propre fond, sinon il devient invisible dans un des deux cas. */
+.live-bar .link-button {
+  color: #fff;
+  text-decoration: none;
+  background: rgba(11, 10, 22, .6);
+  padding: 10px 18px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
 .round-button[aria-pressed="true"] { background: var(--accent); color: #2A2140; }
 
 .next-page-chip {
