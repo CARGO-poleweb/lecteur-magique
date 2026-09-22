@@ -184,6 +184,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: width .3s ease, height .3s ease, inset .3s ease, border-radius .3s ease, opacity .2s ease;
 }
 .camera-layer video { width: 100%; height: 100%; object-fit: cover; }
+/* En plein écran on montre l'image entière : c'est celle qui sera lue, et
+   recadrer donnerait une fausse idée de ce qui entre dans le champ. */
+.camera-layer.is-full video { object-fit: contain; }
 .camera-layer.is-off { top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .camera-layer.is-full { inset: 0; border-radius: 0; }
 .camera-layer.is-mini {
@@ -195,12 +198,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 2px solid rgba(255, 255, 255, .85);
   box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
 }
+/* Le cadre montre la zone que l'application surveille pour décider de lire
+   (le centre de l'image) : la page doit la remplir. */
 .camera-guide {
   position: absolute;
-  inset: 10% 6%;
-  border: 3px dashed rgba(255, 255, 255, .5);
+  inset: 20%;
+  border: 3px dashed rgba(255, 255, 255, .55);
   border-radius: 18px;
   pointer-events: none;
+  mix-blend-mode: difference;
 }
 .camera-layer.is-mini .camera-guide { display: none; }
 
