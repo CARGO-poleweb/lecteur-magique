@@ -1,12 +1,23 @@
 /**
- * Service worker : l'app démarre hors-ligne, et le moteur de lecture ainsi que
- * le modèle français sont conservés après le premier scan.
+ * Service worker.
+ *
+ * Deux régimes, parce que les fichiers n'ont pas la même nature :
+ *
+ *   — l'application elle-même (html, css, js) change à chaque mise en ligne.
+ *     Elle est donc servie **par le réseau d'abord**, le cache ne servant que
+ *     de filet hors-ligne. Servir le cache en premier, comme le veut l'usage,
+ *     condamnait l'utilisateur à voir la version de la veille.
+ *
+ *   — le moteur de reconnaissance et le modèle français (dossier `vendor/`)
+ *     pèsent une dizaine de mégaoctets et ne changent presque jamais : eux
+ *     sont servis **par le cache d'abord**, et gardés à travers les mises à jour.
  */
 
-const SHELL_CACHE = 'lecteur-shell-v1';
-const RUNTIME_CACHE = 'lecteur-runtime-v1';
+const CACHE_VERSION = '1.2.0';
+const APP_CACHE = `lecteur-app-${CACHE_VERSION}`;
+const VENDOR_CACHE = 'lecteur-vendor-v1';       // survit aux mises à jour de l'app
 
-const SHELL = [
+const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
@@ -22,6 +33,7 @@ const SHELL = [
   './js/settings.js',
   './js/store.js',
   './js/palette.js',
+  './js/version.js',
   './js/text.js',
   './js/dialogue.js',
   './js/casting.js',
@@ -42,15 +54,13 @@ const SHELL = [
   './js/screens/premium.js',
 ];
 
-/** L'application ne dépend d'aucun CDN : seul son propre domaine est mis en cache.
- *  (Le moteur OCR et le modèle français sont servis depuis `vendor/`.) */
-const CACHEABLE_HOSTS = [];
+const isVendor = (url) => url.pathname.includes('/vendor/');
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    const cache = await caches.open(SHELL_CACHE);
+    const cache = await caches.open(APP_CACHE);
     // Un fichier manquant ne doit pas faire échouer toute l'installation.
-    await Promise.all(SHELL.map((url) => cache.add(url).catch(() => {})));
+    await Promise.all(APP_SHELL.map((url) => cache.add(url).catch(() => {})));
     await self.skipWaiting();
   })());
 });
@@ -59,7 +69,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     await Promise.all(names
-      .filter((name) => name !== SHELL_CACHE && name !== RUNTIME_CACHE)
+      .filter((name) => name !== APP_CACHE && name !== VENDOR_CACHE)
       .map((name) => caches.delete(name)));
     await self.clients.claim();
   })());
@@ -70,31 +80,37 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  const sameOrigin = url.origin === self.location.origin;
-  const cacheable = sameOrigin || CACHEABLE_HOSTS.includes(url.hostname);
-  if (!cacheable) return;                       // ElevenLabs et le reste : direct au réseau.
+  if (url.origin !== self.location.origin) return;     // ElevenLabs et le reste : direct au réseau
 
-  event.respondWith((async () => {
-    const cacheName = sameOrigin ? SHELL_CACHE : RUNTIME_CACHE;
-    const cache = await caches.open(cacheName);
-    const cached = await cache.match(request);
-
-    const fromNetwork = fetch(request).then((response) => {
-      if (response && (response.ok || response.type === 'opaque')) {
-        cache.put(request, response.clone()).catch(() => {});
-      }
+  // Gros fichiers immuables : le cache d'abord, sinon on les retélécharge pour rien.
+  if (isVendor(url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(VENDOR_CACHE);
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (response.ok) cache.put(request, response.clone()).catch(() => {});
       return response;
-    }).catch(() => null);
+    })());
+    return;
+  }
 
-    // Le cache répond tout de suite ; la copie fraîche arrive pour la prochaine fois.
-    if (cached) { event.waitUntil(fromNetwork); return cached; }
-
-    const response = await fromNetwork;
-    if (response) return response;
-    if (request.mode === 'navigate') {
-      const fallback = await cache.match('./index.html');
-      if (fallback) return fallback;
+  // L'application : le réseau d'abord, pour ne jamais rester bloqué sur une
+  // version périmée ; le cache prend le relais dès qu'il n'y a plus de réseau.
+  event.respondWith((async () => {
+    const cache = await caches.open(APP_CACHE);
+    try {
+      const response = await fetch(request);
+      if (response.ok) cache.put(request, response.clone()).catch(() => {});
+      return response;
+    } catch {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      if (request.mode === 'navigate') {
+        const fallback = await cache.match('./index.html');
+        if (fallback) return fallback;
+      }
+      return new Response('Hors-ligne', { status: 503, statusText: 'Hors-ligne' });
     }
-    return new Response('Hors-ligne', { status: 503, statusText: 'Hors-ligne' });
   })());
 });

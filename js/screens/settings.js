@@ -9,8 +9,7 @@ import * as premium from '../premium.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
 import { getWorker } from '../ocr.js';
-
-const APP_VERSION = '1.0.0';
+import { APP_VERSION } from '../version.js';
 
 function switchRow(title, note, name) {
   const input = el('input', {
@@ -164,6 +163,22 @@ export function createSettingsScreen() {
             render();
           },
         }, '↩️ Réglages par défaut'),
+        el('button', {
+          class: 'chip',
+          onClick: async () => {
+            setBusy('Mise à jour…');
+            try {
+              const registration = await navigator.serviceWorker?.getRegistration();
+              await registration?.update();
+              // On jette les fichiers de l'application, jamais ceux du moteur
+              // de reconnaissance : ils pèsent une dizaine de mégaoctets.
+              for (const name of await caches.keys()) {
+                if (!name.includes('vendor')) await caches.delete(name);
+              }
+            } catch { /* on recharge quand même */ }
+            location.reload();
+          },
+        }, '🔄 Forcer la mise à jour'),
       ]),
     ]));
 

@@ -160,7 +160,10 @@ export function createPremiumScreen() {
     if (model) host.append(model);
 
     // Les personnages du livre en cours d'abord : c'est ce qu'on veut régler.
-    const inUse = new Set(Object.values(session.casting || {}));
+    // Sans livre ouvert, ce classement n'a pas de sens : on liste simplement tout.
+    const inUse = session.segments?.length
+      ? new Set(Object.values(session.casting || {}))
+      : new Set();
     const ordered = [...TIMBRES].sort((a, b) => Number(inUse.has(b.id)) - Number(inUse.has(a.id)));
 
     if (inUse.size) {
