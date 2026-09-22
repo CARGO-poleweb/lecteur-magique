@@ -39,6 +39,7 @@ const SHELL = [
   './js/screens/read.js',
   './js/screens/library.js',
   './js/screens/settings.js',
+  './js/screens/premium.js',
 ];
 
 /** L'application ne dépend d'aucun CDN : seul son propre domaine est mis en cache.

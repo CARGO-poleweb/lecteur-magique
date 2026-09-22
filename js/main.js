@@ -12,6 +12,7 @@ import { createCastScreen } from './screens/cast.js';
 import { createReadScreen } from './screens/read.js';
 import { createLibraryScreen } from './screens/library.js';
 import { createSettingsScreen } from './screens/settings.js';
+import { createPremiumScreen } from './screens/premium.js';
 
 /**
  * iOS n'autorise la synthèse vocale que si elle a déjà été déclenchée par un
@@ -119,6 +120,7 @@ function start() {
   register('read', createReadScreen(live));
   register('library', createLibraryScreen());
   register('settings', createSettingsScreen());
+  register('premium', createPremiumScreen());
 
   router.start('home');
   registerServiceWorker();

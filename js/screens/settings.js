@@ -6,6 +6,7 @@ import { TIMBRES } from '../casting.js';
 import { loadVoices, frenchVoices, describeVoices } from '../voices.js';
 import { previewTimbre } from '../player.js';
 import * as premium from '../premium.js';
+import { router } from '../router.js';
 import { store } from '../store.js';
 import { getWorker } from '../ocr.js';
 
@@ -63,79 +64,10 @@ export function createSettingsScreen() {
       el('p', { class: 'setting-note' }, settings.get('voiceProvider') === 'premium'
         ? "Le texte des pages est envoyé à ElevenLabs pour être joué. Chaque extrait est ensuite gardé sur l'appareil."
         : "Tout reste sur le téléphone : aucune page, aucun texte n'est envoyé nulle part."),
-    ]);
-  }
-
-  function premiumBlock() {
-    const keyInput = el('input', {
-      class: 'input', type: 'password', placeholder: 'Clé API ElevenLabs',
-      value: settings.get('premiumKey'), autocomplete: 'off', spellcheck: 'false',
-    });
-
-    const voiceSelects = el('div', {});
-    const buildSelects = (voices) => {
-      clear(voiceSelects);
-      for (const timbre of TIMBRES) {
-        const select = el('select', {
-          class: 'input',
-          onChange: (event) => settings.update({
-            premiumVoices: { ...settings.get('premiumVoices'), [timbre.id]: event.target.value },
-          }),
-        }, [el('option', { value: '' }, '— voix de l’appareil —')]);
-        for (const voice of voices) {
-          select.append(el('option', {
-            value: voice.id,
-            selected: settings.get('premiumVoices')?.[timbre.id] === voice.id,
-          }, voice.name));
-        }
-        voiceSelects.append(el('div', { class: 'setting-head', style: 'margin-bottom:8px' }, [
-          el('span', { class: 'setting-title' }, `${timbre.emoji} ${timbre.name}`),
-        ]), select);
-      }
-    };
-
-    return el('div', { class: 'setting' }, [
-      el('div', { class: 'setting-head' }, [el('span', { class: 'setting-title' }, 'Clé ElevenLabs')]),
-      keyInput,
-      el('p', { class: 'setting-note' },
-        "La clé est gardée dans ce navigateur, sur cet appareil. Elle n'est envoyée qu'à ElevenLabs. "
-        + "Crée de préférence une clé limitée à la synthèse vocale."),
-      el('div', { class: 'modal-actions' }, [
-        el('button', {
-          class: 'chip',
-          onClick: async () => {
-            settings.set('premiumKey', keyInput.value.trim());
-            if (!keyInput.value.trim()) { toast('Clé effacée.'); render(); return; }
-            setBusy('Vérification de la clé…');
-            try {
-              const voices = await premium.listVoices();
-              setBusy(false);
-              buildSelects(voices);
-              toast(`Clé valide : ${voices.length} voix disponibles.`, 'ok');
-            } catch (error) {
-              setBusy(false);
-              toast(error.message, 'error');
-            }
-          },
-        }, '✅ Vérifier et charger les voix'),
-      ]),
-      el('details', {}, [
-        el('summary', { class: 'setting-title' }, 'Associer une voix à chaque personnage'),
-        el('p', { class: 'setting-note' }, 'Vérifie la clé pour charger la liste des voix de ton compte.'),
-        voiceSelects,
-      ]),
-      el('div', { class: 'modal-actions' }, [
-        el('button', {
-          class: 'chip',
-          onClick: async () => {
-            const size = await premium.cacheSize().catch(() => 0);
-            const sure = await confirmBox(`Vider le cache audio (${Math.round(size / 1024)} ko) ?`, { confirmLabel: 'Vider' });
-            if (!sure) return;
-            await premium.clearCache();
-            toast('Cache audio vidé.');
-          },
-        }, '🧹 Vider le cache audio'),
-      ]),
+      el('button', {
+        class: 'btn btn-primary btn-large',
+        onClick: () => router.go('premium'),
+      }, premium.isConfigured() ? '✨ Régler les vraies voix' : '✨ Mettre de vraies voix'),
     ]);
   }
 
@@ -183,7 +115,6 @@ export function createSettingsScreen() {
 
     host.append(el('p', { class: 'setting-group-title' }, 'Voix'));
     host.append(providerRow());
-    if (settings.get('voiceProvider') === 'premium') host.append(premiumBlock());
     host.append(await systemVoicesBlock());
 
     host.append(el('p', { class: 'setting-group-title' }, 'Hors-ligne'));

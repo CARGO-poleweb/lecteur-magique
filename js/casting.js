@@ -90,3 +90,78 @@ export function autoCast(characters, existing = {}) {
   }
   return casting;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Association des timbres aux voix d'un compte ElevenLabs.
+ *  Les voix arrivent étiquetées (genre, âge, description, usage) : on
+ *  s'en sert pour proposer une distribution tenable sans rien écouter.
+ * ------------------------------------------------------------------ */
+
+/** Ce que chaque timbre cherche chez une voix. */
+const PREMIUM_WISHES = {
+  narrateur: { use: /narrat|story/i, bonus: /calm|warm|pleasant|smooth/i },
+  fillette: { gender: 'female', age: /young/i, bonus: /child|girl|bright|cheer/i },
+  garcon: { gender: 'male', age: /young/i, bonus: /child|boy|bright/i },
+  maman: { gender: 'female', age: /middle/i, bonus: /warm|soft|gentle/i },
+  papa: { gender: 'male', age: /middle/i, bonus: /warm|calm/i },
+  mamie: { gender: 'female', age: /old/i, bonus: /grand|warm/i },
+  papi: { gender: 'male', age: /old/i, bonus: /grand|warm/i },
+  loup: { gender: 'male', bonus: /deep|gruff|raspy|hoarse|husky|dark/i },
+  ogre: { gender: 'male', bonus: /deep|gruff|booming|monster|dark/i },
+  geant: { gender: 'male', bonus: /deep|booming|powerful/i },
+  dragon: { gender: 'male', bonus: /deep|raspy|dark|intense/i },
+  sorciere: { gender: 'female', age: /old/i, bonus: /raspy|witch|crackl|sharp|villain/i },
+  fee: { gender: 'female', age: /young/i, bonus: /soft|light|whisper|sweet/i },
+  princesse: { gender: 'female', age: /young/i, bonus: /sweet|gentle|elegant/i },
+  roi: { gender: 'male', bonus: /authorit|deep|noble|command/i },
+  souris: { gender: 'female', age: /young/i, bonus: /light|small|squeak|high/i },
+  oiseau: { bonus: /light|bright|high/i },
+  chat: { bonus: /playful|sly|smooth/i },
+  chien: { gender: 'male', bonus: /deep|friendly/i },
+  robot: { bonus: /flat|monoton|robot|neutral/i },
+  pirate: { gender: 'male', bonus: /raspy|rough|gruff|character/i },
+  lutin: { bonus: /playful|mischie|light|quirky/i },
+};
+
+/** Tout ce qu'une voix raconte sur elle-même, en une chaîne. */
+const voiceText = (voice) => [
+  voice.name,
+  voice.description,
+  ...Object.values(voice.labels || {}),
+].filter(Boolean).join(' ');
+
+function scoreVoice(wish, voice) {
+  const labels = voice.labels || {};
+  const text = voiceText(voice);
+  let score = 0;
+  if (wish.gender) score += labels.gender === wish.gender ? 3 : -2;
+  if (wish.age) score += wish.age.test(labels.age || '') ? 2 : 0;
+  if (wish.use) score += wish.use.test(`${labels.use_case || ''} ${text}`) ? 2 : 0;
+  if (wish.bonus) score += wish.bonus.test(text) ? 3 : 0;
+  // À qualité égale, une voix française évite un accent anglais sur du français.
+  if (/french|fran\u00e7ais/i.test(text)) score += 2;
+  return score;
+}
+
+/**
+ * Propose une voix ElevenLabs par timbre, sans donner deux fois la même tant
+ * qu'il en reste. `existing` est conservé : on ne défait pas un choix manuel.
+ */
+export function suggestPremiumVoices(voices, existing = {}, timbreIds = TIMBRES.map((t) => t.id)) {
+  const chosen = { ...existing };
+  const used = new Set(Object.values(chosen).filter(Boolean));
+  if (!voices.length) return chosen;
+
+  for (const id of timbreIds) {
+    if (chosen[id]) continue;
+    const wish = PREMIUM_WISHES[id] || {};
+    const ranked = voices
+      .map((voice) => ({ voice, score: scoreVoice(wish, voice) }))
+      .sort((a, b) => b.score - a.score);
+    const free = ranked.find((entry) => !used.has(entry.voice.id)) || ranked[0];
+    if (!free) continue;
+    chosen[id] = free.voice.id;
+    used.add(free.voice.id);
+  }
+  return chosen;
+}

@@ -8,6 +8,7 @@ import { TIMBRES, timbreById, autoCast } from '../casting.js';
 import { previewTimbre } from '../player.js';
 import { NARRATOR_KEY, NARRATOR_NAME } from '../dialogue.js';
 import { saveBook } from '../store.js';
+import { settings } from '../settings.js';
 
 export function createCastScreen() {
   const host = qs('#cast-list');
@@ -66,6 +67,13 @@ export function createCastScreen() {
 
   function render() {
     clear(host);
+    host.append(el('button', {
+      class: 'btn btn-primary btn-large',
+      style: 'margin-bottom:16px',
+      onClick: () => router.go('premium'),
+    }, settings.get('voiceProvider') === 'premium'
+      ? '✨ Régler les vraies voix'
+      : '✨ Ces voix sonnent robot ? Mettre de vraies voix'));
     host.append(row(NARRATOR_KEY, NARRATOR_NAME, 0, { renamable: false }));
     for (const character of session.characters) {
       host.append(row(character.key, character.name, character.count, { renamable: true }));

@@ -186,6 +186,20 @@ export function createPlayer(handlers = {}) {
     });
   }
 
+  /**
+   * Prépare à l'avance les extraits suivants. Sans cela, chaque phrase marque
+   * un temps d'arrêt le temps de son téléchargement. Le cache et la mise en
+   * commun des requêtes garantissent qu'on ne paie jamais deux fois.
+   */
+  function prefetch(fromIndex) {
+    if (settings.get('voiceProvider') !== 'premium' || !premium.isConfigured() || premiumFailed) return;
+    for (let i = fromIndex; i < Math.min(fromIndex + 2, chunks.length); i += 1) {
+      const config = voiceFor(chunks[i].speakerKey);
+      if (!config.premiumVoiceId) continue;
+      premium.synthesize(chunks[i].text, { voiceId: config.premiumVoiceId }).catch(() => { /* on verra à la lecture */ });
+    }
+  }
+
   async function speakChunk(chunk, mine) {
     const config = voiceFor(chunk.speakerKey);
     const wantsPremium = settings.get('voiceProvider') === 'premium'
@@ -197,8 +211,11 @@ export function createPlayer(handlers = {}) {
       try {
         return await speakPremium(chunk, config, mine);
       } catch (error) {
-        premiumFailed = true;                       // on ne réessaie pas à chaque phrase
-        handlers.onWarning?.(`${error.message} On continue avec les voix de l'appareil.`);
+        // Clé refusée ou quota épuisé : inutile d'insister à chaque phrase.
+        if (error.fatal) premiumFailed = true;
+        handlers.onWarning?.(error.fatal
+          ? `${error.message} On continue avec les voix de l'appareil.`
+          : error.message);
       }
     }
     return speakLocal(chunk, config);
@@ -218,6 +235,7 @@ export function createPlayer(handlers = {}) {
       current = i;
       emit();
       handlers.onChunk?.(i, chunks[i]);
+      prefetch(i + 1);
 
       let outcome;
       try {
